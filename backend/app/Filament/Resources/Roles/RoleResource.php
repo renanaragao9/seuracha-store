@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Roles;
 
 use App\Filament\BaseResource;
-use App\Filament\Concerns\ExcludesSuperAdmins;
 use App\Filament\Resources\Roles\Pages\CreateRole;
 use App\Filament\Resources\Roles\Pages\EditRole;
 use App\Filament\Resources\Roles\Pages\ListRoles;
@@ -21,8 +20,6 @@ use UnitEnum;
 
 class RoleResource extends BaseResource
 {
-    use ExcludesSuperAdmins;
-
     protected static ?string $model = Role::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldCheck;

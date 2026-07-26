@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Traits\HasFileUploads;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -19,7 +20,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements FilamentUser
 {
-    use HasApiTokens, HasFactory, HasFileUploads, Notifiable, SoftDeletes;
+    use BelongsToTenant, HasApiTokens, HasFactory, HasFileUploads, Notifiable, SoftDeletes;
 
     protected $table = 'users';
 

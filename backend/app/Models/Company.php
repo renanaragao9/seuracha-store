@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\CurrentCompanyScope;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Company extends BaseModel
@@ -20,6 +21,11 @@ class Company extends BaseModel
         'settings',
         'trial_ends_at',
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new CurrentCompanyScope);
+    }
 
     protected function casts(): array
     {

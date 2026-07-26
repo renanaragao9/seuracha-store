@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Permission extends BaseModel
 {
+    use BelongsToTenant;
+
     protected $table = 'permissions';
 
     protected $fillable = [
@@ -22,6 +25,11 @@ class Permission extends BaseModel
         return [
             'is_super_admin' => 'boolean',
         ];
+    }
+
+    public function tenantScopeIncludesGlobalRecords(): bool
+    {
+        return true;
     }
 
     public function roles(): BelongsToMany
