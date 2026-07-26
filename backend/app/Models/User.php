@@ -14,7 +14,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'phone', 'image_path', 'status', 'role_id', 'last_login_at', 'email_verified_at'])]
+#[Fillable(['name', 'email', 'password', 'phone', 'image_path', 'status', 'company_id', 'role_id', 'is_super_admin', 'last_login_at', 'email_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
 
 class User extends Authenticatable implements FilamentUser
@@ -29,12 +29,18 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'password' => 'hashed',
+            'is_super_admin' => 'boolean',
         ];
     }
 
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
     }
 
     protected function fileUploadFields(): array

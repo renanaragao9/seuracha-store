@@ -21,8 +21,10 @@ return new class extends Migration
             $table->string('image_path')->nullable();
             $table->timestamp('last_login_at')->nullable();
             $table->timestamp('email_verified_at')->nullable();
+            $table->boolean('is_super_admin')->default(false);
             $table->rememberToken();
             $table->foreignId('role_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('company_id')->nullable()->constrained()->cascadeOnDelete();
             $table->timestamps();
             $table->softDeletes();
 
