@@ -143,6 +143,7 @@ return [
 
     'middleware' => [
         'web',
+        'auth',
         RestrictedDocsAccess::class,
     ],
 

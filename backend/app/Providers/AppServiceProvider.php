@@ -11,6 +11,7 @@ use App\Policies\PermissionPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends AuthServiceProvider
@@ -45,5 +46,9 @@ class AppServiceProvider extends AuthServiceProvider
         }
 
         $this->registerPolicies();
+
+        Gate::define('viewApiDocs', function (?User $user): bool {
+            return (bool) $user?->is_super_admin;
+        });
     }
 }
