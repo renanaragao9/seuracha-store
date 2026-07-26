@@ -11,6 +11,10 @@ class TenantScope implements Scope
 {
     public function apply(Builder $builder, Model $model): void
     {
+        if (! Auth::hasUser()) {
+            return;
+        }
+
         $user = Auth::user();
 
         if (! $user || $user->is_super_admin) {

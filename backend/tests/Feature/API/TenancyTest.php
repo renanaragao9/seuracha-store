@@ -93,10 +93,19 @@ class TenancyTest extends TestCase
         return ['Authorization' => 'Bearer '.$this->tokenFor($user)];
     }
 
+    protected function getAs(User $user, string $uri)
+    {
+        return $this->withHeaders($this->authHeaders($user))->getJson($uri);
+    }
+
+    protected function postAs(User $user, string $uri, array $payload = [])
+    {
+        return $this->withHeaders($this->authHeaders($user))->postJson($uri, $payload);
+    }
+
     public function test_regular_user_only_lists_own_company_users(): void
     {
-        $response = $this->withHeaders($this->authHeaders($this->userA))
-            ->getJson('/api/v1/users');
+        $response = $this->getAs($this->userA, '/api/v1/users');
 
         $response->assertOk();
         $emails = collect($response->json('data'))->pluck('email');
@@ -107,8 +116,7 @@ class TenancyTest extends TestCase
 
     public function test_regular_user_only_lists_own_company(): void
     {
-        $response = $this->withHeaders($this->authHeaders($this->userA))
-            ->getJson('/api/v1/companies');
+        $response = $this->getAs($this->userA, '/api/v1/companies');
 
         $response->assertOk();
         $slugs = collect($response->json('data'))->pluck('slug');
@@ -119,45 +127,40 @@ class TenancyTest extends TestCase
 
     public function test_regular_user_gets_404_viewing_other_tenant_user(): void
     {
-        $response = $this->withHeaders($this->authHeaders($this->userA))
-            ->getJson("/api/v1/users/{$this->userB->id}");
+        $response = $this->getAs($this->userA, "/api/v1/users/{$this->userB->id}");
 
         $response->assertStatus(404);
     }
 
     public function test_regular_user_gets_404_viewing_other_tenant_company(): void
     {
-        $response = $this->withHeaders($this->authHeaders($this->userA))
-            ->getJson("/api/v1/companies/{$this->companyB->id}");
+        $response = $this->getAs($this->userA, "/api/v1/companies/{$this->companyB->id}");
 
         $response->assertStatus(404);
     }
 
     public function test_user_without_permission_gets_403_listing_users(): void
     {
-        $response = $this->withHeaders($this->authHeaders($this->noPermissionUser))
-            ->getJson('/api/v1/users');
+        $response = $this->getAs($this->noPermissionUser, '/api/v1/users');
 
         $response->assertStatus(403);
     }
 
     public function test_user_without_permission_gets_403_viewing_own_company(): void
     {
-        $response = $this->withHeaders($this->authHeaders($this->noPermissionUser))
-            ->getJson("/api/v1/companies/{$this->companyA->id}");
+        $response = $this->getAs($this->noPermissionUser, "/api/v1/companies/{$this->companyA->id}");
 
         $response->assertStatus(403);
     }
 
     public function test_regular_user_cannot_escalate_company_id_when_creating_user(): void
     {
-        $response = $this->withHeaders($this->authHeaders($this->userA))
-            ->postJson('/api/v1/users', [
-                'name' => 'Novo Usuário',
-                'email' => 'novo@test.com',
-                'password' => 'password123',
-                'company_id' => $this->companyB->id,
-            ]);
+        $response = $this->postAs($this->userA, '/api/v1/users', [
+            'name' => 'Novo Usuário',
+            'email' => 'novo@test.com',
+            'password' => 'password123',
+            'company_id' => $this->companyB->id,
+        ]);
 
         $response->assertOk();
 
@@ -169,22 +172,20 @@ class TenancyTest extends TestCase
 
     public function test_regular_user_cannot_create_company_without_super_admin(): void
     {
-        $response = $this->withHeaders($this->authHeaders($this->userA))
-            ->postJson('/api/v1/companies', [
-                'name' => 'Nova Empresa',
-                'slug' => 'nova-empresa',
-            ]);
+        $response = $this->postAs($this->userA, '/api/v1/companies', [
+            'name' => 'Nova Empresa',
+            'slug' => 'nova-empresa',
+        ]);
 
         $response->assertStatus(403);
     }
 
     public function test_super_admin_can_create_company(): void
     {
-        $response = $this->withHeaders($this->authHeaders($this->superAdmin))
-            ->postJson('/api/v1/companies', [
-                'name' => 'Nova Empresa',
-                'slug' => 'nova-empresa',
-            ]);
+        $response = $this->postAs($this->superAdmin, '/api/v1/companies', [
+            'name' => 'Nova Empresa',
+            'slug' => 'nova-empresa',
+        ]);
 
         $response->assertOk();
         $this->assertDatabaseHas('companies', ['slug' => 'nova-empresa']);
@@ -192,8 +193,7 @@ class TenancyTest extends TestCase
 
     public function test_super_admin_sees_all_companies(): void
     {
-        $response = $this->withHeaders($this->authHeaders($this->superAdmin))
-            ->getJson('/api/v1/companies');
+        $response = $this->getAs($this->superAdmin, '/api/v1/companies');
 
         $response->assertOk();
         $slugs = collect($response->json('data'))->pluck('slug');
@@ -204,8 +204,7 @@ class TenancyTest extends TestCase
 
     public function test_super_admin_can_view_any_tenant_user(): void
     {
-        $response = $this->withHeaders($this->authHeaders($this->superAdmin))
-            ->getJson("/api/v1/users/{$this->userB->id}");
+        $response = $this->getAs($this->superAdmin, "/api/v1/users/{$this->userB->id}");
 
         $response->assertOk();
         $response->assertJsonPath('data.email', 'admin-b@test.com');

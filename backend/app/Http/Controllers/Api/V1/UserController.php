@@ -3,21 +3,24 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\BaseController;
+use App\Http\Requests\Api\V1\User\StoreUserRequest;
+use App\Http\Requests\Api\V1\User\UpdateUserRequest;
 use App\Http\Resources\Api\V1\User\UserResource;
-use App\Models\Role;
 use App\Models\User;
+use App\Services\User\DestroyUserService;
+use App\Services\User\IndexUserService;
+use App\Services\User\StoreUserService;
+use App\Services\User\UpdateUserService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class UserController extends BaseController
 {
-    public function index(): JsonResponse
+    public function index(IndexUserService $indexUserService): JsonResponse
     {
         $this->authorize('viewAny', User::class);
 
         return $this->successResponse(
-            data: UserResource::collection(User::with('role')->get()),
+            data: UserResource::collection($indexUserService->run()),
             message: 'Usuários listados com sucesso.'
         );
     }
@@ -32,21 +35,16 @@ class UserController extends BaseController
         );
     }
 
-    public function store(Request $request): JsonResponse
-    {
+    public function store(
+        StoreUserRequest $storeUserRequest,
+        StoreUserService $storeUserService
+    ): JsonResponse {
         $this->authorize('create', User::class);
 
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'password' => ['required', 'string', 'min:8'],
-            'status' => ['nullable', 'in:active,inactive'],
-            'role_id' => ['nullable', 'integer'],
-            'company_id' => ['nullable', Rule::exists('companies', 'id')],
-        ]);
+        $data = $storeUserRequest->validated();
+        $user = $storeUserService->run($data);
 
-        if (! empty($data['role_id']) && ! Role::find($data['role_id'])) {
+        if (! $user) {
             return $this->errorResponse(
                 errors: ['role_id' => 'Perfil inválido.'],
                 message: 'Perfil inválido.',
@@ -54,29 +52,23 @@ class UserController extends BaseController
             );
         }
 
-        $user = User::create($data);
-
         return $this->successResponse(
-            data: new UserResource($user->load('role')),
+            data: new UserResource($user),
             message: 'Usuário criado com sucesso.'
         );
     }
 
-    public function update(Request $request, User $user): JsonResponse
-    {
+    public function update(
+        UpdateUserRequest $updateUserRequest,
+        User $user,
+        UpdateUserService $updateUserService
+    ): JsonResponse {
         $this->authorize('update', $user);
 
-        $data = $request->validate([
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'password' => ['sometimes', 'nullable', 'string', 'min:8'],
-            'status' => ['sometimes', 'in:active,inactive'],
-            'role_id' => ['nullable', 'integer'],
-            'company_id' => ['nullable', Rule::exists('companies', 'id')],
-        ]);
+        $data = $updateUserRequest->validated();
+        $user = $updateUserService->run($user, $data);
 
-        if (! empty($data['role_id']) && ! Role::find($data['role_id'])) {
+        if (! $user) {
             return $this->errorResponse(
                 errors: ['role_id' => 'Perfil inválido.'],
                 message: 'Perfil inválido.',
@@ -84,23 +76,17 @@ class UserController extends BaseController
             );
         }
 
-        if (empty($data['password'])) {
-            unset($data['password']);
-        }
-
-        $user->update($data);
-
         return $this->successResponse(
-            data: new UserResource($user->load('role')),
+            data: new UserResource($user),
             message: 'Usuário atualizado com sucesso.'
         );
     }
 
-    public function destroy(User $user): JsonResponse
+    public function destroy(User $user, DestroyUserService $destroyUserService): JsonResponse
     {
         $this->authorize('delete', $user);
 
-        $user->delete();
+        $destroyUserService->run($user);
 
         return $this->successResponse(
             data: null,

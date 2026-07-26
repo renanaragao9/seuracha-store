@@ -6,18 +6,30 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class AuthTest extends TestCase
+class AuthControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_login_with_valid_email_and_password(): void
+    protected function createActiveUser(array $attributes = []): User
     {
-        $user = User::create([
+        return User::create(array_merge([
             'name' => 'Administrador',
             'email' => 'admin@seuracha.com',
             'password' => '12345678',
             'status' => 'active',
-        ]);
+        ], $attributes));
+    }
+
+    protected function authHeaders(User $user): array
+    {
+        return [
+            'Authorization' => 'Bearer '.$user->createToken('auth_token')->plainTextToken,
+        ];
+    }
+
+    public function test_user_can_login_with_valid_email_and_password(): void
+    {
+        $user = $this->createActiveUser();
 
         $response = $this->postJson('/api/v1/login', [
             'email' => 'admin@seuracha.com',
@@ -37,12 +49,8 @@ class AuthTest extends TestCase
 
     public function test_user_can_login_with_valid_phone_and_password(): void
     {
-        User::create([
-            'name' => 'Administrador',
-            'email' => 'admin@seuracha.com',
+        $this->createActiveUser([
             'phone' => '11999999999',
-            'password' => '12345678',
-            'status' => 'active',
         ]);
 
         $response = $this->postJson('/api/v1/login', [
@@ -55,12 +63,7 @@ class AuthTest extends TestCase
 
     public function test_login_fails_with_invalid_password(): void
     {
-        User::create([
-            'name' => 'Administrador',
-            'email' => 'admin@seuracha.com',
-            'password' => '12345678',
-            'status' => 'active',
-        ]);
+        $this->createActiveUser();
 
         $response = $this->postJson('/api/v1/login', [
             'email' => 'admin@seuracha.com',
@@ -106,16 +109,9 @@ class AuthTest extends TestCase
 
     public function test_authenticated_user_can_access_me_endpoint(): void
     {
-        $user = User::create([
-            'name' => 'Administrador',
-            'email' => 'admin@seuracha.com',
-            'password' => '12345678',
-            'status' => 'active',
-        ]);
+        $user = $this->createActiveUser();
 
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        $response = $this->withHeader('Authorization', "Bearer {$token}")
+        $response = $this->withHeaders($this->authHeaders($user))
             ->getJson('/api/v1/me');
 
         $response->assertOk()
@@ -132,16 +128,9 @@ class AuthTest extends TestCase
 
     public function test_authenticated_user_can_logout(): void
     {
-        $user = User::create([
-            'name' => 'Administrador',
-            'email' => 'admin@seuracha.com',
-            'password' => '12345678',
-            'status' => 'active',
-        ]);
+        $user = $this->createActiveUser();
 
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        $response = $this->withHeader('Authorization', "Bearer {$token}")
+        $response = $this->withHeaders($this->authHeaders($user))
             ->postJson('/api/v1/logout');
 
         $response->assertOk()->assertJson(['status' => 'success']);

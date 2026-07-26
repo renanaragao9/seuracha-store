@@ -3,51 +3,47 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\BaseController;
+use App\Http\Requests\Api\V1\Company\StoreCompanyRequest;
+use App\Http\Requests\Api\V1\Company\UpdateCompanyRequest;
 use App\Http\Resources\Api\V1\Company\CompanyResource;
 use App\Models\Company;
+use App\Services\Company\DestroyCompanyService;
+use App\Services\Company\IndexCompanyService;
+use App\Services\Company\ShowCompanyService;
+use App\Services\Company\StoreCompanyService;
+use App\Services\Company\UpdateCompanyService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class CompanyController extends BaseController
 {
-    public function index(): JsonResponse
+    public function index(IndexCompanyService $indexCompanyService): JsonResponse
     {
         $this->authorize('viewAny', Company::class);
 
         return $this->successResponse(
-            data: CompanyResource::collection(Company::query()->get()),
+            data: CompanyResource::collection($indexCompanyService->run()),
             message: 'Empresas listadas com sucesso.'
         );
     }
 
-    public function show(Company $company): JsonResponse
+    public function show(Company $company, ShowCompanyService $showCompanyService): JsonResponse
     {
         $this->authorize('view', $company);
 
         return $this->successResponse(
-            data: new CompanyResource($company),
+            data: new CompanyResource($showCompanyService->run($company)),
             message: 'Empresa encontrada.'
         );
     }
 
-    public function store(Request $request): JsonResponse
-    {
+    public function store(
+        StoreCompanyRequest $storeCompanyRequest,
+        StoreCompanyService $storeCompanyService
+    ): JsonResponse {
         $this->authorize('create', Company::class);
 
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'alpha_dash', 'unique:companies,slug'],
-            'domain' => ['nullable', 'string', 'max:255', 'unique:companies,domain'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'document' => ['nullable', 'string', 'max:30'],
-            'status' => ['nullable', 'in:active,inactive,suspended'],
-            'settings' => ['nullable', 'array'],
-            'trial_ends_at' => ['nullable', 'date'],
-        ]);
-
-        $company = Company::create($data);
+        $data = $storeCompanyRequest->validated();
+        $company = $storeCompanyService->run($data);
 
         return $this->successResponse(
             data: new CompanyResource($company),
@@ -55,23 +51,15 @@ class CompanyController extends BaseController
         );
     }
 
-    public function update(Request $request, Company $company): JsonResponse
-    {
+    public function update(
+        UpdateCompanyRequest $updateCompanyRequest,
+        Company $company,
+        UpdateCompanyService $updateCompanyService
+    ): JsonResponse {
         $this->authorize('update', $company);
 
-        $data = $request->validate([
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'slug' => ['sometimes', 'required', 'string', 'max:255', 'alpha_dash', Rule::unique('companies', 'slug')->ignore($company->id)],
-            'domain' => ['nullable', 'string', 'max:255', Rule::unique('companies', 'domain')->ignore($company->id)],
-            'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'document' => ['nullable', 'string', 'max:30'],
-            'status' => ['sometimes', 'in:active,inactive,suspended'],
-            'settings' => ['nullable', 'array'],
-            'trial_ends_at' => ['nullable', 'date'],
-        ]);
-
-        $company->update($data);
+        $data = $updateCompanyRequest->validated();
+        $company = $updateCompanyService->run($company, $data);
 
         return $this->successResponse(
             data: new CompanyResource($company),
@@ -79,11 +67,11 @@ class CompanyController extends BaseController
         );
     }
 
-    public function destroy(Company $company): JsonResponse
+    public function destroy(Company $company, DestroyCompanyService $destroyCompanyService): JsonResponse
     {
         $this->authorize('delete', $company);
 
-        $company->delete();
+        $destroyCompanyService->run($company);
 
         return $this->successResponse(
             data: null,

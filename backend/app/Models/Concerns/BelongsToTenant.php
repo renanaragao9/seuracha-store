@@ -12,6 +12,10 @@ trait BelongsToTenant
         static::addGlobalScope(new TenantScope);
 
         static::saving(function (self $model): void {
+            if (! Auth::hasUser()) {
+                return;
+            }
+
             $user = Auth::user();
 
             if ($user && ! $user->is_super_admin) {
